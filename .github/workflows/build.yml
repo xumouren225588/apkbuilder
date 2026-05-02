@@ -1,0 +1,51 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch: # 手动触发运行
+  push:
+    branches: [ main ] # 只有推送到 main 分支时才触发，你可以根据需要修改
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17' # 现代 Cordova (Android 12+) 必须使用 JDK 17
+          distribution: 'temurin'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Cordova
+        run: npm install -g cordova
+
+      - name: Install Project Dependencies
+        run: |
+          # 如果你有 package.json 依赖
+          if [ -f package.json ]; then
+            npm install
+          fi
+
+      - name: Prepare Cordova Platform
+        run: |
+          # 确保安卓平台环境正确（即使已提交 platforms 目录，prepare 也是安全的）
+          cordova prepare android --no-telemetry
+
+      - name: Build APK (Debug)
+        run: cordova build android --debug --no-telemetry
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: my-cordova-app-debug
+          # 标准 Cordova 安卓编译输出路径
+          path: platforms/android/app/build/outputs/apk/debug/app-debug.apk
+          archive: false
