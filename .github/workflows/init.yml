@@ -1,0 +1,53 @@
+name: Initialize Cordova Android Project
+
+on:
+  workflow_dispatch: # 手动触发运行
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          # 必须使用 fetch-depth: 0 以确保能 push
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Cordova
+        run: npm install -g cordova
+
+      - name: Create Cordova Project
+        run: |
+          # 创建临时目录避免与当前仓库的 .git 冲突
+          cordova create temp_cordova com.example.app MyCordovaApp
+          
+          # 进入目录并添加安卓平台
+          cd temp_cordova
+          cordova platform add android --no-telemetry
+          
+          # 将所有文件（除了 .git）移动到仓库根目录
+          cd ..
+          cp -rn temp_cordova/. .
+          rm -rf temp_cordova
+
+      - name: Commit and Push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          # 添加所有生成的文件
+          git add .
+          
+          # 检查是否有文件更改，防止在没有更改时提交导致报错
+          if git diff --quiet && git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: auto-initialize cordova project with android platform"
+            git push origin main
+          fi
